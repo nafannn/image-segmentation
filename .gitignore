@@ -3,3 +3,21 @@ ngetes/
 *.autosave
 slprj/
 *.mexw64
+
+# Hasil pengujian (panel, CSV, grafik, screenshot GUI) tidak masuk repositori:
+# tidak diminta oleh spesifikasi tugas dan bisa dibangkitkan ulang dengan
+# scripts/run_bsds500.m, scripts/sweep_thresholds.m, scripts/capture_gui.m.
+# Semua artefak tetap tersimpan lokal untuk bahan laporan.
+results/
+
+# Sanity test dan script pembangkit bahan laporan dijalankan lokal, bukan bagian
+# yang dikumpulkan: spesifikasi hanya meminta kode sumber + GUI, README, citra,
+# dan pranala CamVid.
+scripts/
+
+# Dataset besar dan model hasil latihan: repositori cukup memuat pranala sumber
+# (lihat data/README.md). Ini mencegah Part D (CamVid) membengkakkan repo.
+data/camvid/
+*.mat
+*.mlx
+*.mlxproj
