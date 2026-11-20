@@ -1,10 +1,10 @@
 function L = laplaceEdge(G, neighbors)
-%LAPLACEEDGE Laplace (second-derivative) response, own implementation.
-%   L = laplaceEdge(G, neighbors) returns the signed Laplacian of G.
-%   Edges are NOT where L is large but where L changes sign
-%   (zero-crossing), so pass L to zeroCrossing afterwards.
-%     neighbors = 4 : [0 1 0; 1 -4 1; 0 1 0]   (lecture 18, slide 55)
-%     neighbors = 8 : [1 1 1; 1 -8 1; 1 1 1]   (slide 57, also diagonals)
+%LAPLACEEDGE Respons Laplace (turunan kedua), implementasi sendiri.
+%   L = laplaceEdge(G, neighbors) mengembalikan Laplacian bertanda dari G.
+%   Edge tidak ada di tempat L besar, tapi di tempat L berganti tanda
+%   (zero-crossing). Karena itu L masih harus diumpan ke zeroCrossing.
+%     neighbors = 4 : [0 1 0; 1 -4 1; 0 1 0]   hanya tetangga atas/bawah/kiri/kanan
+%     neighbors = 8 : [1 1 1; 1 -8 1; 1 1 1]   diagonal ikut dihitung
     if nargin < 2
         neighbors = 8;
     end

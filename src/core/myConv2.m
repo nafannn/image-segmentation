@@ -1,26 +1,27 @@
 function out = myConv2(I, K)
-%MYCONV2 2-D convolution written from scratch ('same' size, replicate border).
-%   out = myConv2(I, K) convolves the gray image I (any numeric type) with
-%   kernel K and returns a double matrix the same size as I. Replaces the
-%   built-in conv2 used in the lecture so every edge operator is our own.
+%MYCONV2 Convolution 2-D yang ditulis dari nol ('same', border replikasi).
+%   out = myConv2(I, K) meng-convolve citra gray I (tipe numerik apa pun)
+%   dengan kernel K dan mengembalikan matriks double seukuran I. Ini
+%   menggantikan conv2 bawaan yang dipakai di kuliah, supaya semua operator
+%   tepi benar-benar buatan sendiri.
 %
-%   Instead of looping over every pixel (slow in MATLAB) we loop over the
-%   kernel elements: each term K(i,j) * shifted(I) is a whole-matrix
-%   operation, so a 3x3 kernel costs only 9 matrix multiply-adds.
+%   Alih-alih mengulang per piksel (lambat di MATLAB), loop-nya jalan di
+%   atas elemen kernel: tiap suku K(i,j) * shifted(I) adalah operasi satu
+%   matriks penuh, jadi kernel 3x3 cuma butuh 9 kali tambah-kali matriks.
     I = double(I);
     K = double(K);
     [H, W] = size(I);
     [kr, kc] = size(K);
 
-    % Convolution = correlation with the kernel rotated 180 degrees
+    % Convolution = korelasi dengan kernel yang diputar 180 derajat
     Kf = rot90(K, 2);
 
-    % Padding before/after so the kernel "center" lands on each pixel.
-    % For even sizes (Roberts 2x2) the extra row/col goes after.
+    % Padding sebelum/sesudah supaya "pusat" kernel mendarat di tiap piksel.
+    % Untuk ukuran genap (Roberts 2x2) sisa baris/kolom ditaruh di belakang.
     padTop  = floor((kr - 1) / 2);  padBottom = kr - 1 - padTop;
     padLeft = floor((kc - 1) / 2);  padRight  = kc - 1 - padLeft;
 
-    % Replicate padding through clamped indices (no padarray needed)
+    % Padding replikasi lewat indeks yang dijepit (tanpa perlu padarray)
     rowIdx = [ones(1, padTop),  1:H, H * ones(1, padBottom)];
     colIdx = [ones(1, padLeft), 1:W, W * ones(1, padRight)];
     P = I(rowIdx, colIdx);
@@ -29,7 +30,7 @@ function out = myConv2(I, K)
     for i = 1:kr
         for j = 1:kc
             w = Kf(i, j);
-            if w ~= 0   % zero coefficients contribute nothing, skip them
+            if w ~= 0   % koefisien nol tidak menyumbang, jadi dilewati
                 out = out + w * P(i:i + H - 1, j:j + W - 1);
             end
         end

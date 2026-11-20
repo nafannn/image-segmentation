@@ -1,39 +1,49 @@
 function [R, info] = applyEdgeSegmentation(img, methodKey, params, thr, segParams)
-%APPLYEDGESEGMENTATION Part B pipeline used by the GUI and scripts.
-%   img       : input image (RGB or gray)
-%   methodKey : operator key from edgeRegistry ('sobel', 'log', ...)
-%   params    : operator parameters (struct, from the registry)
-%   thr       : struct with fields Mode ('otsu'|'percentile'|'manual') and Value
-%   segParams : struct with preSigma, closeRadius, minArea, keepN, clearBorder
+%APPLYEDGESEGMENTATION Pipeline Bagian B yang dipakai GUI dan script.
+%   img       : citra masukan (RGB atau gray)
+%   methodKey : key operator dari edgeRegistry ('sobel', 'log', ...)
+%   params    : parameter operator (struct, dari registry)
+%   thr       : struct berisi Mode ('otsu'|'percentile'|'manual') dan Value
+%   segParams : preSigma, closeRadius, minArea, keepN, clearBorder
 %
-%   R    : struct with fields
-%            Response  - operator output scaled to [0,1] for display
-%            Edges     - logical edge map
-%            Mask      - logical object mask
-%            Segmented - object pixels on a black background
-%            Overlay   - input with the object contour drawn
-%   info : struct with fields Label, ParamStr, Threshold, NumObjects
+%   R    : struct dengan field
+%            Response  - keluaran operator diskalakan ke [0,1] untuk tampilan
+%            Edges     - peta tepi logical
+%            Mask      - mask objek logical
+%            Segmented - piksel objek di atas latar hitam
+%            Overlay   - citra masukan dengan kontur objek digambar
+%   info : struct dengan field Label, ParamStr, Threshold, NumObjects
     G = toGrayDouble(img);
     T = NaN;
     segParams = withDefaults(segParams);
 
-    % Optional pre-smoothing: a Gaussian blur removes fine texture (grass,
-    % snow, bricks) that would otherwise produce many short edges
+    % Pre-smoothing opsional: blur Gaussian membuang tekstur halus (rumput,
+    % salju, bata) yang kalau dibiarkan memunculkan banyak tepi pendek
     if segParams.preSigma > 0
         G = myConv2(G, gaussianKernel(segParams.preSigma));
     end
 
     switch methodKey
         case {'roberts', 'prewitt', 'sobel'}
-            % First order: gradient magnitude, edge where magnitude > T
+            % Orde satu: magnitude gradien, tepi di tempat magnitude >= T.
+            % Varian kekuatan tepi dipilih lewat parameter `mag`.
             op = str2func([methodKey 'Edge']);
-            M = op(G);
+            [~, Gx, Gy] = op(G);
+            magMode = 1;
+            if isfield(params, 'mag') && ~isempty(params.mag)
+                magMode = round(params.mag);
+            end
+            M = gradientMagnitude(Gx, Gy, magMode);
             [E, T] = thresholdMagnitude(M, thr.Mode, thr.Value);
             response = M / max(max(M(:)), eps);
-            opStr = '';
+            switch magMode
+                case 1, opStr = '';
+                case 2, opStr = 'G = |Gx|+|Gy|';
+                otherwise, opStr = 'G = max(|Gx|,|Gy|)';
+            end
 
         case {'laplace', 'log'}
-            % Second order: edge at zero-crossings whose slope > T
+            % Orde dua: tepi di titik zero-crossing yang slope-nya > T
             if strcmp(methodKey, 'laplace')
                 L = laplaceEdge(G, params.neighbors);
                 opStr = sprintf('%d-neighbor', params.neighbors);
@@ -43,7 +53,8 @@ function [R, info] = applyEdgeSegmentation(img, methodKey, params, thr, segParam
             end
             [S, Z] = zeroCrossing(L);
             [E, T] = thresholdMagnitude(S, thr.Mode, thr.Value, Z);
-            % Signed response mapped to gray: 0.5 = zero, dark = negative, bright = positive
+            % Respons bertanda dipetakan ke gray: 0.5 = nol, gelap = negatif,
+            % terang = positif
             response = 0.5 + L / (2 * max(max(abs(L(:))), eps));
 
         case 'canny'
@@ -55,7 +66,7 @@ function [R, info] = applyEdgeSegmentation(img, methodKey, params, thr, segParam
             error('applyEdgeSegmentation:method', 'Unknown edge operator "%s".', methodKey);
     end
 
-    % Edge map -> object mask
+    % Peta tepi -> mask objek
     [mask, mInfo] = edgeToObjectMask(E, segParams.closeRadius, segParams.minArea, ...
         segParams.keepN, segParams.clearBorder);
 
@@ -65,7 +76,7 @@ function [R, info] = applyEdgeSegmentation(img, methodKey, params, thr, segParam
     R.Segmented = applyMask(img, mask);
     R.Overlay = drawContour(img, mask);
 
-    % Human-readable summary for the status bar / figure titles
+    % Ringkasan yang enak dibaca untuk status bar / judul figure
     reg = edgeRegistry();
     info.Label = reg(strcmp({reg.Key}, methodKey)).Label;
     parts = {};
@@ -77,6 +88,9 @@ function [R, info] = applyEdgeSegmentation(img, methodKey, params, thr, segParam
     end
     parts{end+1} = sprintf('pre=%g close=%d minArea=%d keep=%d border=%d', segParams.preSigma, ...
         segParams.closeRadius, segParams.minArea, segParams.keepN, segParams.clearBorder);
+    if isfield(mInfo, 'BorderFallback') && mInfo.BorderFallback
+        parts{end+1} = 'border fallback (semua region menyentuh tepi)';
+    end
     parts{end+1} = sprintf('%d edge px, %d object(s)', nnz(E), numel(mInfo.KeptAreas));
     info.ParamStr = strjoin(parts, '  |  ');
     info.Threshold = T;
@@ -84,7 +98,7 @@ function [R, info] = applyEdgeSegmentation(img, methodKey, params, thr, segParam
 end
 
 function s = withDefaults(s)
-% Fill in missing segmentation fields so older callers keep working
+% Isi field segmentasi yang belum ada supaya pemanggil lama tetap jalan
     d = struct('preSigma', 0, 'closeRadius', 3, 'minArea', 200, 'keepN', 1, 'clearBorder', 0);
     f = fieldnames(d);
     for i = 1:numel(f)
@@ -95,21 +109,21 @@ function s = withDefaults(s)
 end
 
 function out = applyMask(img, mask)
-% Keep the object pixels, paint the background black
+% Pertahankan piksel objek, latar dicat hitam
     out = img;
     m = repmat(mask, 1, 1, size(img, 3));
     out(~m) = 0;
 end
 
 function out = drawContour(img, mask)
-% Draw the 2-px outline of the mask in a bright color on top of the image
+% Gambar outline mask setebal 2 px dengan warna terang di atas citra
     if size(img, 3) == 1
         img = repmat(img, 1, 1, 3);
     end
     out = im2uint8(img);
-    edgeLine = mask & ~imerode(mask, strel('square', 3));   % inner boundary
-    edgeLine = imdilate(edgeLine, strel('square', 2));       % 2 px thick
-    color = uint8([255 215 0]);                             % gold
+    edgeLine = mask & ~imerode(mask, strel('square', 3));   % batas dalam
+    edgeLine = imdilate(edgeLine, strel('square', 2));       % tebal 2 px
+    color = uint8([255 215 0]);                             % emas
     for c = 1:3
         ch = out(:, :, c);
         ch(edgeLine) = color(c);

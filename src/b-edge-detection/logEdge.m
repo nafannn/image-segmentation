@@ -1,21 +1,24 @@
 function [L, K] = logEdge(G, sigma)
-%LOGEDGE Laplacian of Gaussian response, own implementation.
-%   [L, K] = logEdge(G, sigma) convolves G directly with a LoG kernel built
-%   from the closed form in lecture 18 (slide 63):
-%       LoG(x,y) = (x^2 + y^2 - 2 sigma^2) / sigma^4 * exp(-(x^2 + y^2) / (2 sigma^2))
-%   Smoothing with the Gaussian first suppresses the false edges that the
-%   plain Laplace operator produces on noise. Like Laplace, the edges are
-%   the zero-crossings of L.
-%   K is returned so it can be shown/explained (Mexican hat shape).
+%LOGEDGE Respons Laplacian of Gaussian, implementasi sendiri.
+%   [L, K] = logEdge(G, sigma) mengkonvolusi G langsung dengan kernel LoG
+%   yang dibangun dari rumus tertutup:
+%       LoG(x,y) = (x^2 + y^2 - 2 sigma^2) / sigma^4
+%                  * exp(-(x^2 + y^2) / (2 sigma^2))
+%   Smoothing Gaussian lebih dulu menekan edge palsu yang muncul kalau
+%   operator Laplace dipakai langsung pada citra ber-noise. Sama seperti
+%   Laplace, edge-nya adalah zero-crossing dari L.
+%   K ikut dikembalikan supaya bisa ditampilkan dan dijelaskan bentuknya
+%   (Mexican hat).
     if nargin < 2
         sigma = 2;
     end
-    half = ceil(3 * sigma);                 % +-3 sigma covers the whole hat
+    half = ceil(3 * sigma);                 % +-3 sigma menutup seluruh topi
     [x, y] = meshgrid(-half:half, -half:half);
     r2 = x.^2 + y.^2;
     K = (r2 - 2 * sigma^2) / sigma^4 .* exp(-r2 / (2 * sigma^2));
-    % Truncating the kernel leaves a small non-zero sum; force sum(K) = 0 so a
-    % flat region gives exactly 0 response (no fake zero-crossings).
+    % Kernel yang dipotong menyisakan jumlah kecil yang tidak nol; paksa
+    % sum(K) = 0 supaya region datar memberi respons tepat 0 (tidak muncul
+    % zero-crossing palsu).
     K = K - mean(K(:));
     L = myConv2(G, K);
 end

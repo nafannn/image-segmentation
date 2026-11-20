@@ -1,23 +1,24 @@
 function [S, Z] = zeroCrossing(L)
-%ZEROCROSSING Locate sign changes of a second-derivative response.
+%ZEROCROSSING Cari piksel tempat respons turunan kedua berganti tanda.
 %   [S, Z] = zeroCrossing(L)
-%     L : signed Laplace / LoG response
-%     Z : logical map of pixels where L changes sign with a neighbor
-%     S : strength of the crossing = |L(p) - L(q)| (the "slope" across it),
-%         0 where there is no crossing. Thresholding S removes the weak
-%         crossings caused by noise and tiny intensity ripples.
-%   Neighbors checked: right, down, down-right, down-left. A crossing is
-%   assigned to the pixel of the pair with the smaller |L| (the one closer
-%   to the true zero), which keeps edges one pixel thin.
+%     L : respons Laplace / LoG yang bertanda
+%     Z : peta logical piksel yang L-nya berganti tanda dengan tetangganya
+%     S : kekuatan crossing = |L(p) - L(q)| (kemiringan di titik itu),
+%         bernilai 0 kalau tidak ada crossing. Thresholding S membuang
+%         crossing lemah akibat noise dan riak intensitas kecil.
+%   Tetangga yang dicek: kanan, bawah, bawah-kanan, bawah-kiri. Crossing
+%   dibebankan ke piksel yang |L|-nya lebih kecil (lebih dekat ke nol
+%   sebenarnya), cara ini menjaga edge tetap setebal satu piksel.
     [H, W] = size(L);
     S = zeros(H, W);
     absL = abs(L);
-    offsets = [0 1; 1 0; 1 1; 1 -1];       % [drow dcol]
+    offsets = [0 1; 1 0; 1 1; 1 -1];       % [delta baris, delta kolom]
 
     for k = 1:size(offsets, 1)
         dr = offsets(k, 1);
         dc = offsets(k, 2);
-        % Index ranges so that p = (r, c) and q = (r+dr, c+dc) are both inside
+        % Batasi indeks supaya p = (r, c) dan q = (r+dr, c+dc) dua-duanya
+        % masih di dalam citra
         r = 1:H - dr;
         if dc >= 0
             c = 1:W - dc;
@@ -26,10 +27,10 @@ function [S, Z] = zeroCrossing(L)
         end
         Lp = L(r, c);
         Lq = L(r + dr, c + dc);
-        cross = (Lp .* Lq) < 0;             % opposite signs -> zero in between
+        cross = (Lp .* Lq) < 0;             % beda tanda -> ada nol di antaranya
         slope = abs(Lp - Lq) .* cross;
 
-        % Give the crossing to whichever pixel is nearer to zero
+        % Bebankan crossing ke piksel yang lebih dekat ke nol
         toP = cross & (absL(r, c) <= absL(r + dr, c + dc));
         toQ = cross & ~toP;
 

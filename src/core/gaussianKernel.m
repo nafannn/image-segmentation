@@ -1,9 +1,9 @@
 function K = gaussianKernel(sigma)
-%GAUSSIANKERNEL Normalized 2-D Gaussian kernel G(x,y) for a given sigma.
-%   Size is (2*ceil(3*sigma)+1)^2 so the kernel covers +-3 sigma, where
-%   more than 99% of the Gaussian's weight lies.
+%GAUSSIANKERNEL Kernel Gaussian 2-D ternormalisasi untuk sigma tertentu.
+%   Ukurannya (2*ceil(3*sigma)+1)^2 supaya kernel mencakup +-3 sigma, daerah
+%   tempat lebih dari 99% bobot Gaussian berada.
     half = ceil(3 * sigma);
     [x, y] = meshgrid(-half:half, -half:half);
     K = exp(-(x.^2 + y.^2) / (2 * sigma^2));
-    K = K / sum(K(:));   % weights sum to 1 -> smoothing keeps mean brightness
+    K = K / sum(K(:));   % bobot berjumlah 1 -> brightness rata-rata tetap
 end
