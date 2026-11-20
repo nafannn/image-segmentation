@@ -3,3 +3,5 @@ ngetes/
 *.autosave
 slprj/
 *.mexw64
+data/CamVid/
+__pycache__/
