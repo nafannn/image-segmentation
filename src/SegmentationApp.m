@@ -530,7 +530,7 @@ classdef SegmentationApp < matlab.apps.AppBase
             app.E_ThrHintLabel = app.makeMuted(sb, 9, '');
 
             % Edge map -> object mask
-            app.makeSection(sb, 10, 'Segmentasi objek');
+            app.makeSection(sb, 10, 'Pra-proses & segmentasi objek');
             app.E_SegGrid = app.makeGrid(sb, {22}, {'1x'});
             app.E_SegGrid.Layout.Row = 11;
             app.E_SegGrid.Layout.Column = 1;
