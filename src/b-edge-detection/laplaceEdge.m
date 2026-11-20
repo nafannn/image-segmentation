@@ -1,5 +1,5 @@
 function L = laplaceEdge(G, neighbors)
-%LAPLACEEDGE Respons Laplace (turunan kedua), implementasi sendiri.
+%LAPLACEEDGE Respons Laplace (turunan kedua) dari citra gray.
 %   L = laplaceEdge(G, neighbors) mengembalikan Laplacian bertanda dari G.
 %   Edge tidak ada di tempat L besar, tapi di tempat L berganti tanda
 %   (zero-crossing). Karena itu L masih harus diumpan ke zeroCrossing.

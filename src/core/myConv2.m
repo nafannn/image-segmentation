@@ -1,9 +1,8 @@
 function out = myConv2(I, K)
 %MYCONV2 Convolution 2-D yang ditulis dari nol ('same', border replikasi).
 %   out = myConv2(I, K) meng-convolve citra gray I (tipe numerik apa pun)
-%   dengan kernel K dan mengembalikan matriks double seukuran I. Ini
-%   menggantikan conv2 bawaan yang dipakai di kuliah, supaya semua operator
-%   tepi benar-benar buatan sendiri.
+%   dengan kernel K dan mengembalikan matriks double seukuran I, jadi
+%   operator tepi di proyek ini tidak bergantung pada conv2.
 %
 %   Alih-alih mengulang per piksel (lambat di MATLAB), loop-nya jalan di
 %   atas elemen kernel: tiap suku K(i,j) * shifted(I) adalah operasi satu

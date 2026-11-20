@@ -1,5 +1,5 @@
 function [M, Gx, Gy] = sobelEdge(G)
-%SOBELEDGE Operator Sobel (implementasi sendiri).
+%SOBELEDGE Operator Sobel (gradien 3x3).
 %   Beda pusat dengan baris/kolom tengah diberi bobot c = 2, jadi ada
 %   sedikit smoothing tegak lurus arah turunannya:
 %       Sx = [-1 0 1; -2 0 2; -1 0 1]

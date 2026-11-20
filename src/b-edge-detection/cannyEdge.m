@@ -14,8 +14,8 @@ function [E, M] = cannyEdge(G, low, high, sigma)
     end
     E = edge(G / 255, 'canny', [low high], sigma);
 
-    % Respons ini cuma untuk tampilan, dihitung dengan operator buatan
-    % sendiri: Gaussian dulu, baru Sobel
+    % Respons untuk tampilan dihitung ulang: smoothing Gaussian dulu,
+    % lalu gradien Sobel
     Gs = myConv2(G, gaussianKernel(sigma));
     M = sobelEdge(Gs);
 end

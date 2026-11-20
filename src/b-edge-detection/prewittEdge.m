@@ -1,5 +1,5 @@
 function [M, Gx, Gy] = prewittEdge(G)
-%PREWITTEDGE Operator Prewitt (implementasi sendiri).
+%PREWITTEDGE Operator Prewitt (gradien 3x3).
 %   Skema turunannya sama dengan Sobel, bedanya bobot tengah c = 1:
 %       Px = [-1 0 1; -1 0 1; -1 0 1]    (horizontal berubah -> edge vertikal)
 %       Py = [ 1 1 1;  0 0 0; -1 -1 -1]  (vertikal berubah -> edge horizontal)

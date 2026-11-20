@@ -1,5 +1,5 @@
 function [M, Gx, Gy] = robertsEdge(G)
-%ROBERTSEDGE Operator Roberts cross (implementasi sendiri).
+%ROBERTSEDGE Operator Roberts cross (gradien 2x2 di dua diagonal).
 %   [M, Gx, Gy] = robertsEdge(G) untuk citra gray double G.
 %   Gradient dihitung sepanjang dua diagonal (operator silang):
 %       R+ = [1  0;  0 -1]   ->  f(x,y) - f(x+1,y+1)

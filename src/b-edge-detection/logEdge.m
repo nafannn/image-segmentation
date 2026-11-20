@@ -1,5 +1,5 @@
 function [L, K] = logEdge(G, sigma)
-%LOGEDGE Respons Laplacian of Gaussian, implementasi sendiri.
+%LOGEDGE Respons Laplacian of Gaussian dari citra gray.
 %   [L, K] = logEdge(G, sigma) mengkonvolusi G langsung dengan kernel LoG
 %   yang dibangun dari rumus tertutup:
 %       LoG(x,y) = (x^2 + y^2 - 2 sigma^2) / sigma^4
