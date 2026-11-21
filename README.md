@@ -1,104 +1,145 @@
-# Image Segmentation
+# Image Segmentation Studio
 
-Tugas 3 IF4073 Pemrosesan Citra Digital: segmentasi citra dengan tiga pendekatan
-yang disatukan dalam satu GUI MATLAB:
+Program GUI MATLAB untuk Tugas 3 IF4073 Pemrosesan Citra Digital. Satu aplikasi
+menyatukan tiga pendekatan segmentasi citra, masing-masing dalam satu tab:
 
-1. **Segmentasi berbasis deteksi tepi** (Laplace, LoG, Sobel, Prewitt, Roberts, Canny)
-2. **Segmentasi klasik split and merge** (quadtree, divide and conquer)
-3. **Segmentasi semantik dengan deep learning** (DeepLabV3+ ResNet-18, fine-tuning pada CamVid, 11 kelas)
+| Tab | Bagian | Isi |
+|---|---|---|
+| **Edge Detection** | B | Segmentasi objek dari hasil deteksi tepi: Laplace, LoG, Sobel, Prewitt, Roberts (ditulis sendiri) dan Canny (bawaan MATLAB, memang diizinkan soal) |
+| **Split & Merge** | C | Segmentasi klasik divide and conquer: quadtree split dengan predikat homogenitas `range` atau `std`, lalu merge region bertetangga yang gabungannya masih homogen |
+| **Semantic (CNN)** | D | Segmentasi semantik dengan DeepLabV3+ (encoder ResNet-18 pretrained ImageNet) yang di-fine-tune pada CamVid (11 kelas); model dilatih dengan PyTorch dan dipanggil dari GUI MATLAB lewat `pyenv` |
 
-Bagian B dan C diimplementasikan di MATLAB. Bagian D dilatih dengan PyTorch dan
-dipanggil dari GUI MATLAB melalui integrasi Python (`pyenv`).
+Anggota kelompok:
 
-## Dependencies
+| Nama | NIM |
+|---|---|
+| Nurul Na'im Natifah | 18223106 |
+| Muhammad Izzat Jundy | 13523094 |
 
-| Requirement | Version | Used by | Notes |
-|---|---|---|---|
-| MATLAB | R2019b or later (tested on R2026a) | all | `uifigure`, `uigridlayout`, `uiaxes`, `pyenv` |
-| Image Processing Toolbox | required | Parts B, C | `edge` (Canny only), morphology (`imclose`, `imfill`, `bwlabel`) |
-| Python | 3.12 (from [python.org](https://www.python.org/downloads/)) | Part D | must be a version your MATLAB release supports |
-| `torch`, `torchvision` | CPU build is enough (tested: 2.15.0) | Part D | no GPU needed for inference |
-| `segmentation-models-pytorch` | 0.6.0 | Part D | same version as used for training |
-| Trained weights `best_model.zip` | ~49 MB | Part D | not in git, see [Setup step 3](#setup) |
+![Tampilan tab Edge Detection](docs/gui_preview.jpg)
 
-Deep Learning Toolbox is **not** needed: the CNN runs in Python.
+*Tangkapan layar tab Edge Detection setelah menjalankan Sobel pada `101027.jpg`.
+Status bar di bawah menampilkan parameter efektif, jumlah piksel tepi, jumlah
+objek, dan waktu proses.*
 
-## Setup
+## Dependensi
 
-1. **Clone the repository**
+| Kebutuhan | Versi | Catatan |
+|---|---|---|
+| MATLAB | R2019b atau lebih baru | memakai `uifigure`, `uigridlayout`, `uiaxes`; diuji pada R2026a |
+| Image Processing Toolbox | wajib | `strel`, `imclose`, `imfill`, `bwareaopen`, `bwlabel`, `imdilate`, `imerode`, dan `edge` (khusus operator Canny) |
+| Computer Vision Toolbox | opsional | hanya untuk caption pada gambar panel; tanpa toolbox ini gambar tetap jadi, teks judulnya saja yang kosong |
+| Python | 3.12 dari [python.org](https://www.python.org/downloads/) | hanya tab Semantic (bagian D); jangan pakai Python dari Microsoft Store karena tidak stabil dengan MATLAB |
+| `torch`, `torchvision` | build CPU cukup (diuji 2.15.0) | inferensi model bagian D, tidak perlu GPU |
+| `segmentation-models-pytorch` | 0.6.0 | arsitektur DeepLabV3+, versi sama dengan saat pelatihan |
+
+Deep Learning Toolbox **tidak** diperlukan: CNN bagian D berjalan di Python dan
+dipanggil dari MATLAB.
+
+Operator deteksi tepi bagian B **tidak** memakai fungsi bawaan MATLAB:
+konvolusi, Otsu, dan penelusuran zero-crossing ditulis sendiri di `src/core` dan
+`src/b-edge-detection`. Toolbox hanya dipakai untuk morfologi (menutup celah
+kontur, mengisi lubang, memberi label region).
+
+## Cara Menjalankan
+
+1. Clone repositori lalu masuk ke foldernya:
    ```bash
    git clone https://github.com/nafannn/image-segmentation.git
    cd image-segmentation
    ```
-
-2. **Install Python and the Part D libraries** (only needed for the Semantic tab)
-
-   Install Python 3.12 from python.org. Avoid the Microsoft Store version, since
-   MATLAB does not work reliably with it. Then install the libraries into *that*
-   Python (use its full path if `python` points to a different install):
+2. *(Hanya untuk tab Semantic)* Siapkan Python bagian D, cukup sekali:
    ```bash
    python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
    python -m pip install segmentation-models-pytorch==0.6.0
    ```
-
-3. **Download the trained weights**
-
-   Download `best_model.zip` from the
-   [Releases page](https://github.com/nafannn/image-segmentation/releases) and put it in
-   `notebooks/output/`, next to `config.json`. Do not unzip it: a PyTorch checkpoint
-   is itself a zip archive and is loaded as is (renaming it to `best_model.pth` also works).
-
-4. **Point MATLAB to that Python** (once; MATLAB remembers it)
+   Pakai path lengkap `python.exe` kalau perintah `python` menunjuk ke instalasi
+   lain. Lalu di MATLAB, arahkan ke Python tersebut (MATLAB mengingatnya):
    ```matlab
-   pyenv('Version', 'C:\Users\<you>\AppData\Local\Programs\Python\Python312\python.exe')
+   pyenv('Version', 'C:\Users\<nama>\AppData\Local\Programs\Python\Python312\python.exe')
    ```
-   Alternatively set the environment variable `SEG_PYTHON` to the interpreter path.
-   `segmentSemantic.m` starts Python as a separate process (`ExecutionMode = OutOfProcess`)
-   so PyTorch's native libraries do not clash with MATLAB's.
-
-## How to Run
-
-1. Open MATLAB and set the working directory to `src/`:
+   Alternatif: set environment variable `SEG_PYTHON` ke path interpreter tersebut.
+   Bobot model (`notebooks/output/best_model.zip`) sudah ikut di repositori, jangan
+   di-unzip: checkpoint PyTorch memang berformat zip dan dimuat apa adanya.
+3. Buka MATLAB, lalu jalankan dari **root repo**:
    ```matlab
-   cd('path/to/image-segmentation/src')
-   ```
-2. Run the application:
-   ```matlab
+   addpath(genpath('src'))
    SegmentationApp
    ```
-3. Choose a tab (Edge Detection, Split & Merge, Semantic (CNN)), load an image from
-   the dataset list or with **Browse**, then press **Run**.
+   Alternatif: `cd src` lalu `SegmentationApp` (aplikasi menambahkan foldernya
+   sendiri ke path, tetapi `data/` dicari relatif terhadap root repo).
+4. Jendela GUI terbuka dengan tiga tab. Di setiap tab:
 
-On the Semantic tab the first **Run** takes about 15 s (starting Python and loading the
-model); after that each image takes about 0.3–0.5 s on a CPU.
+   | Langkah | Keterangan |
+   |---|---|
+   | 1. Pilih citra | dropdown berisi 8 citra BSDS500 dari `data/bsds500/`, atau tombol **Browse...** untuk citra lain |
+   | 2. Atur parameter | panel kiri; isinya menyesuaikan operator/predikat yang dipilih |
+   | 3. **Run** | menjalankan pipeline; status bar menampilkan parameter efektif, jumlah objek/region, dan waktu proses |
+   | 4. **Reset** | mengosongkan citra dan mengembalikan parameter ke nilai default |
+   | 5. **Export View** | menyimpan seluruh tampilan jendela sebagai PNG |
 
-## Part D: Semantic Segmentation (CNN)
+5. Panel di sisi kanan menampilkan hasil bertahap:
+
+   | Tab | Urutan panel |
+   |---|---|
+   | Edge Detection | citra asli, respons operator, peta tepi biner, mask objek, hasil segmentasi, kontur objek |
+   | Split & Merge | citra asli, grid quadtree, rata-rata blok, rata-rata region, label region, batas region |
+   | Semantic | citra masukan, label semantik, overlay, plus legenda kelas |
+
+### Parameter yang sering disesuaikan
+
+| Tab | Parameter | Arti |
+|---|---|---|
+| Edge Detection | `Otsu` / `Percentile` / `Manual` | cara memilih ambang peta tepi; Otsu otomatis dari histogram respons |
+| | `Magnitude` (1/2/3) | varian kekuatan tepi: akar, jumlah absolut, atau maksimum |
+| | `preSigma`, `closeRadius`, `minArea`, `keepN`, `clearBorder` | pra-pelebaran Gaussian, radius closing, luas region minimal, jumlah region yang dipertahankan, buang region yang menyentuh tepi |
+| Split & Merge | `Tsplit` / `Tmerge` | threshold homogenitas saat split / saat merge (skala intensitas 0-255) |
+| | `minBlock` / `minRegion` | ukuran blok terkecil (px) dan luas region minimal (px) |
+| Semantic | - | model dan daftar kelas mengikuti model bagian D |
+
+Nilai default sudah disetel untuk citra BSDS500 (481x321): bagian C memakai
+`minBlock` 16 px, `minRegion` 1500 px, dan `Tsplit = Tmerge` 25 (predikat `std`)
+atau 60 (predikat `range`), sehingga satu citra menghasilkan puluhan region,
+bukan ribuan. Threshold tetap boleh disesuaikan per citra.
+
+### Catatan saat menjalankan
+
+- Tab **Semantic**: Run pertama butuh sekitar 15 detik (menyalakan proses Python
+  dan memuat model), selanjutnya sekitar 0,3-0,5 detik per citra di CPU. Kalau
+  Python belum disiapkan (langkah 2), tab ini menampilkan pesan error yang
+  menjelaskan langkahnya; tab Edge Detection dan Split & Merge tetap dapat dipakai.
+- Pada citra bertekstur sangat padat, semua region hasil pengisian kontur bisa
+  menyentuh tepi citra. Program tidak mengembalikan mask kosong: filter
+  `clearBorder` dilewati dan status bar menuliskan
+  `border fallback (semua region menyentuh tepi)`.
+- Kalau muncul `Undefined function 'SegmentationApp'`, path belum ditambahkan -
+  ulangi langkah 3.
+
+## Bagian D: Segmentasi Semantik (CNN)
 
 ### Model
 
-**DeepLabV3+** with a **ResNet-18** encoder pretrained on ImageNet
+**DeepLabV3+** dengan encoder **ResNet-18** pretrained ImageNet
 ([segmentation-models-pytorch](https://github.com/qubvel-org/segmentation_models.pytorch)).
-The pretrained encoder is fine-tuned together with a new decoder and an 11-class head
-(transfer learning).
+Encoder pretrained di-fine-tune bersama decoder baru dan head 11 kelas (transfer learning).
 
-### Dataset: CamVid
+### Dataset CamVid
 
-CamVid (701 labeled frames, 720×960) is not stored in this repository because of its size.
+CamVid (701 frame berlabel, 720x960) tidak disimpan di repositori. Pranala sumber:
 
-- Images: http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/files/701_StillsRaw_full.zip
-- Pixel labels: http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/data/LabeledApproved_full.zip
+- Citra: http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/files/701_StillsRaw_full.zip
+- Label piksel: http://web4.cs.ucl.ac.uk/staff/g.brostow/MotionSegRecData/data/LabeledApproved_full.zip
 
-Training used the Kaggle version of CamVid, which contains the same frames with
-`class_dict.csv` and the standard `train/val/test` split. To use it locally, extract it to
-`data/CamVid/` (ignored by git).
+Pelatihan memakai versi Kaggle dari CamVid (frame yang sama, dengan `class_dict.csv`
+dan pembagian `train/val/test` standar).
 
-**Split:** 369 train / 100 validation / 232 test. This is the standard CamVid split, which
-separates frames by video sequence, so near-identical neighboring frames never appear in
-both training and test data.
+**Pembagian data:** 369 train / 100 validasi / 232 test. Ini pembagian standar CamVid
+yang memisahkan frame per sekuens video, sehingga frame yang hampir identik tidak
+muncul sekaligus di data latih dan data uji.
 
-**Class grouping (32 → 11):**
+**Pengelompokan kelas (32 → 11):**
 
-| Class | Original CamVid classes |
+| Kelas | Kelas asli CamVid |
 |---|---|
 | Sky | Sky |
 | Building | Building, Wall, Bridge, Tunnel, Archway |
@@ -111,71 +152,86 @@ both training and test data.
 | Car | Car, SUVPickupTruck, Truck_Bus, Train, OtherMoving |
 | Pedestrian | Pedestrian, Child, CartLuggagePram, Animal |
 | Bicyclist | Bicyclist, MotorcycleScooter |
-| *(ignored)* | Void |
+| *(diabaikan)* | Void |
 
-### Training
+### Pelatihan
 
 Notebook: [`notebooks/tugas-3-pengolahan-citra-digital.ipynb`](notebooks/tugas-3-pengolahan-citra-digital.ipynb),
-run on Kaggle (GPU T4).
+dijalankan di Kaggle (GPU T4).
 
-| Setting | Value |
+| Pengaturan | Nilai |
 |---|---|
-| Input size | 384×512 (CamVid downscaled, same 3:4 aspect ratio) |
-| Augmentation | random scale 0.75–1.25, random crop, horizontal flip |
-| Loss | pixel-wise cross-entropy, median-frequency class weights, Void ignored |
+| Ukuran input | 384x512 (CamVid diperkecil, rasio 3:4 tetap) |
+| Augmentasi | skala acak 0,75-1,25, random crop, flip horizontal |
+| Loss | cross-entropy per piksel, bobot kelas median-frequency, Void diabaikan |
 | Optimizer | AdamW, LR 1e-4 (encoder) / 1e-3 (decoder + head), weight decay 1e-4 |
-| LR schedule | polynomial decay (power 0.9) |
-| Epochs / batch | 80 / 8, best checkpoint chosen by validation mIoU |
+| Jadwal LR | polynomial decay (power 0,9) |
+| Epoch / batch | 80 / 8, checkpoint terbaik dipilih dari mIoU validasi |
 
-All settings are also stored in [`notebooks/output/config.json`](notebooks/output/config.json).
+Semua pengaturan juga tersimpan di [`notebooks/output/config.json`](notebooks/output/config.json).
 
-**To retrain:** upload the notebook to Kaggle, add the CamVid dataset as input, enable
-GPU and Internet, then **Save & Run All**. Download `best_model.pth` (it may arrive
-as `best_model.zip`) and `config.json` into `notebooks/output/`.
+**Melatih ulang:** unggah notebook ke Kaggle, tambahkan dataset CamVid sebagai input,
+aktifkan GPU dan Internet, lalu **Save & Run All**. Unduh `best_model.pth` (bisa
+terunduh sebagai `best_model.zip`) dan `config.json` ke `notebooks/output/`.
 
-### Results (CamVid test set, 232 images, full 720×960 resolution)
+### Hasil (data uji CamVid, 232 citra, resolusi penuh 720x960)
 
-| Metric | Value |
+| Metrik | Nilai |
 |---|---|
-| Global pixel accuracy | 0.912 |
-| Mean class accuracy | 0.837 |
-| Mean IoU | 0.679 |
+| Global pixel accuracy | 0,912 |
+| Mean class accuracy | 0,837 |
+| Mean IoU | 0,679 |
 
-| Class | IoU | Class | IoU |
+| Kelas | IoU | Kelas | IoU |
 |---|---|---|---|
-| Sky | 0.919 | SignSymbol | 0.466 |
-| Building | 0.840 | Fence | 0.551 |
-| Pole | 0.276 | Car | 0.817 |
-| Road | 0.940 | Pedestrian | 0.501 |
-| Pavement | 0.773 | Bicyclist | 0.595 |
-| Tree | 0.789 | | |
+| Sky | 0,919 | SignSymbol | 0,466 |
+| Building | 0,840 | Fence | 0,551 |
+| Pole | 0,276 | Car | 0,817 |
+| Road | 0,940 | Pedestrian | 0,501 |
+| Pavement | 0,773 | Bicyclist | 0,595 |
+| Tree | 0,789 | | |
 
-Figures (confusion matrix, sample predictions, training curves) are in `notebooks/output/`.
+Gambar pendukung (confusion matrix, contoh prediksi, kurva pelatihan) ada di
+`notebooks/output/`.
 
-### How the GUI calls the model
+### Alur pemanggilan dari GUI
 
 `SegmentationApp` → `segmentSemantic(img)` (MATLAB) → `semantic_predict.predict()` (Python):
-the image is resized to 384×512 and normalized, the network predicts class scores, the scores
-are upsampled back to the original size, and the most likely class is taken per pixel.
-`segmentSemantic` returns the label image (1–11), the class names and the class colors.
+citra diperkecil ke 384x512 dan dinormalisasi, network menghasilkan skor kelas, skor
+diperbesar kembali ke ukuran asli, lalu kelas dengan skor tertinggi dipilih per piksel.
+`segmentSemantic` mengembalikan citra label (1-11), nama kelas, dan warna kelas.
+Python dijalankan sebagai proses terpisah (`ExecutionMode = OutOfProcess`) supaya
+library native PyTorch tidak bentrok dengan library MATLAB.
 
-## File Structure
+## Struktur Berkas
 
-- `src/`: MATLAB source code
-  - `SegmentationApp.m`: main GUI
-  - `core/`: shared utilities (convolution, thresholding, display helpers, registries)
-  - `b-edge-detection/`: Part B, edge operators and edge-based object segmentation
-  - `c-split-merge/`: Part C, quadtree split and merge
-  - `d-semantic/`: Part D, semantic segmentation
-    - `segmentSemantic.m`: MATLAB entry point used by the GUI
-    - `semantic_predict.py`: PyTorch inference (model loading, preprocessing, prediction)
-- `notebooks/`: Kaggle training notebook
-  - `output/`: training outputs (`config.json`, metrics, figures; weights downloaded separately)
-- `scripts/`: batch experiments and helper scripts
-  - `prepareCamVid.m`: converts CamVid RGB labels into 11-class index masks (local evaluation)
-- `data/`: test images (see [data/README.md](data/README.md))
-- `results/`: experiment outputs used in the report
+```
+src/
+  SegmentationApp.m        GUI utama (3 tab)
+  core/                    utilitas bersama: konvolusi, Otsu, registri parameter,
+                           label-to-RGB, serta pipeline applyEdgeSegmentation dan
+                           applySplitMerge yang dipanggil GUI
+  b-edge-detection/        bagian B: 6 operator tepi, zero-crossing, mask objek
+  c-split-merge/           bagian C: quadtree split, region adjacency, merge
+  d-semantic/              bagian D: segmentSemantic.m (jembatan MATLAB-Python)
+                           dan semantic_predict.py (inferensi PyTorch)
+notebooks/
+  tugas-3-...ipynb         notebook pelatihan bagian D (Kaggle)
+  output/                  bobot model (best_model.zip), config.json, metrik, gambar
+data/
+  bsds500/                 8 citra uji bagian B dan C
+  README.md                keterangan data dan pranala unduh CamVid
+docs/
+  gui_preview.jpg          tangkapan layar GUI untuk README
+```
 
-## License
+## Data Uji
+
+- **BSDS500**: 8 citra pada `data/bsds500/`, dipakai untuk bagian B dan C.
+- **CamVid** (bagian D): tidak disimpan di repositori karena ukurannya besar.
+  Pranala unduh ada di [`data/README.md`](data/README.md) dan di bagian
+  [Bagian D](#bagian-d-segmentasi-semantik-cnn); dataset diletakkan di `data/camvid/`.
+
+## Lisensi
 
 [MIT License](LICENSE)
