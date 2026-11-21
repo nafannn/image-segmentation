@@ -1,9 +1,9 @@
 classdef SegmentationApp < matlab.apps.AppBase
-    %SEGMENTATIONAPP IF4073 Tugas 3 -- Segmentasi Citra. One GUI covering:
+    %SEGMENTATIONAPP IF4073 Tugas 3 -- Segmentasi Citra. Satu GUI, tiga tab:
     %     Tab 1 - Edge Detection   (B: Laplace, LoG, Sobel, Prewitt, Roberts, Canny
-    %                               + edge-based object segmentation)
+    %                               + segmentasi objek berbasis tepi)
     %     Tab 2 - Split & Merge    (C: quadtree split + region merge)
-    %     Tab 3 - Semantic (CNN)   (D: calls segmentSemantic(img) from src/d-semantic)
+    %     Tab 3 - Semantic (CNN)   (D: panggil segmentSemantic(img) di src/d-semantic)
 
     properties (Access = public)
         UIFigure
@@ -12,7 +12,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         SMTab
         SemTab
 
-        % ---- Tab 1: Edge Detection ----
+        % ---- Tab 1: Deteksi Tepi ----
         E_DatasetDropDown
         E_BrowseButton
         E_ImageInfoLabel
@@ -25,7 +25,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         E_RunButton
         E_ResetButton
         E_ExportButton
-        E_Axes              % 1x6: original, response, edges, mask, segmented, overlay
+        E_Axes              % 1x6: asli, respons, tepi, mask, segmentasi, overlay
         E_StatusLabel
 
         % ---- Tab 2: Split & Merge ----
@@ -38,10 +38,10 @@ classdef SegmentationApp < matlab.apps.AppBase
         S_RunButton
         S_ResetButton
         S_ExportButton
-        S_Axes              % 1x6: original, split grid, split mean, merged mean, labels, boundary
+        S_Axes              % 1x6: asli, grid split, mean split, mean merge, label, batas
         S_StatusLabel
 
-        % ---- Tab 3: Semantic (CNN) ----
+        % ---- Tab 3: Semantik (CNN) ----
         D_DatasetDropDown
         D_BrowseButton
         D_ImageInfoLabel
@@ -49,7 +49,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         D_RunButton
         D_ResetButton
         D_ExportButton
-        D_Axes              % 1x3: input, labels, overlay
+        D_Axes              % 1x3: masukan, label, overlay
         D_StatusLabel
     end
 
@@ -57,7 +57,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         EdgeRegistry
         EdgeSegSpecs
         SMRegistry
-        E_ParamControls     % containers.Map: param name -> uieditfield
+        E_ParamControls     % containers.Map: nama param -> uieditfield
         E_SegControls
         S_ParamControls
 
@@ -67,25 +67,25 @@ classdef SegmentationApp < matlab.apps.AppBase
     end
 
     % ---------------------------------------------------------------------
-    %  Visual theme (dark, single accent). Change colors here only.
+    %  Tema tampilan (gelap, satu warna aksen). Ubah warna hanya di sini.
     % ---------------------------------------------------------------------
     properties (Constant, Access = private)
         Font      = 'Segoe UI'
-        ColBg     = [0.075 0.082 0.106]   % window background
+        ColBg     = [0.075 0.082 0.106]   % latar jendela
         ColPanel  = [0.114 0.125 0.161]   % sidebar / header
-        ColCard   = [0.141 0.153 0.196]   % image cards
-        ColInput  = [0.090 0.098 0.129]   % edit fields / dropdowns
+        ColCard   = [0.141 0.153 0.196]   % card citra
+        ColInput  = [0.090 0.098 0.129]   % edit field / dropdown
         ColText   = [0.925 0.933 0.953]
         ColMuted  = [0.580 0.616 0.698]
         ColAccent = [0.427 0.506 0.980]   % indigo
-        ColAccent2= [0.196 0.776 0.659]   % teal (success)
+        ColAccent2= [0.196 0.776 0.659]   % teal (berhasil)
         ColWarn   = [0.976 0.733 0.278]
         ColError  = [0.957 0.400 0.427]
         DatasetPlaceholder = '-- pilih citra --'
     end
 
     % =====================================================================
-    %  Small reusable builders + styling helpers
+    %  Builder kecil yang dipakai ulang + helper pengaturan gaya
     % =====================================================================
     methods (Access = private)
 
@@ -107,7 +107,7 @@ classdef SegmentationApp < matlab.apps.AppBase
                     b.FontColor = [1 1 1];
                     b.FontWeight = 'bold';
                     b.FontSize = 13;
-                otherwise   % secondary
+                otherwise   % selain primary: gaya secondary
                     b.BackgroundColor = app.ColCard;
                     b.FontColor = app.ColText;
             end
@@ -161,7 +161,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         end
 
         function ax = buildImageCard(app, parent, row, col, titleText)
-            % Card = rounded-looking panel with a title and a borderless axes
+            % Card = panel seperti kartu, ada judul + axes tanpa border
             p = uipanel(parent);
             p.Layout.Row = row;
             p.Layout.Column = col;
@@ -199,7 +199,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         end
 
         function showOn(app, ax, img)
-            % Show img on ax, or a muted placeholder when img is empty
+            % Tampilkan img di ax, atau placeholder redup kalau kosong
             if isempty(img)
                 cla(ax);
                 ax.XLim = [0 1];
@@ -208,7 +208,7 @@ classdef SegmentationApp < matlab.apps.AppBase
                     'HorizontalAlignment', 'center', 'FontName', app.Font, ...
                     'FontSize', 11, 'Color', app.ColMuted);
             else
-                % Placeholder fixed the limits to [0 1]; let the image set them again
+                % Placeholder sudah kunci limit ke [0 1]; citra atur ulang
                 ax.XLimMode = 'auto';
                 ax.YLimMode = 'auto';
                 showImageOnAxes(ax, img);
@@ -218,7 +218,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         end
 
         function [sidebar, main, status] = buildTabFrame(app, tab, sidebarRows)
-            % Common layout: sidebar (left) | image cards (right) / status bar
+            % Layout umum: sidebar (kiri) | card citra (kanan) / status bar
             tab.BackgroundColor = app.ColBg;
             tab.ForegroundColor = app.ColText;
 
@@ -261,7 +261,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         end
 
         function [dd, browse, info] = buildInputSection(app, sidebar, startRow, datasetSubdir)
-            % Section header + [dataset dropdown | Browse] + image info line
+            % Judul section + [dropdown dataset | Browse] + info citra
             app.makeSection(sidebar, startRow, 'Citra masukan');
 
             row = app.makeGrid(sidebar, {30}, {'1x', 80});
@@ -294,7 +294,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         end
 
         function map = buildParamPanel(app, paramGrid, specs)
-            % Rebuild a 2-column [label | numeric field] grid from registry specs
+            % Bangun ulang grid 2 kolom [label | field angka] dari registry
             delete(paramGrid.Children);
             map = containers.Map('KeyType', 'char', 'ValueType', 'any');
             if isempty(specs)
@@ -333,11 +333,11 @@ classdef SegmentationApp < matlab.apps.AppBase
 
         function setStatus(app, lbl, msg, level)
             switch level
-                case 'ok',    c = app.ColAccent2; prefix = char(10003);   % check mark
+                case 'ok',    c = app.ColAccent2; prefix = char(10003);   % tanda centang
                 case 'warn',  c = app.ColWarn;    prefix = '!';
-                case 'error', c = app.ColError;   prefix = char(10007);   % cross mark
-                case 'busy',  c = app.ColAccent;  prefix = char(8987);    % hourglass
-                otherwise,    c = app.ColMuted;   prefix = char(8226);    % bullet
+                case 'error', c = app.ColError;   prefix = char(10007);   % tanda silang
+                case 'busy',  c = app.ColAccent;  prefix = char(8987);    % jam pasir
+                otherwise,    c = app.ColMuted;   prefix = char(8226);    % titik
             end
             lbl.FontColor = c;
             lbl.Text = sprintf('  %s  %s', prefix, msg);
@@ -345,7 +345,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         end
 
         function handleRunError(app, lbl, ME)
-            % Not-yet-implemented parts are a warning, real failures an error
+            % Bagian yang belum jadi cukup warning, gagal asli baru error
             if endsWith(ME.identifier, ':notImplemented')
                 app.setStatus(lbl, ME.message, 'warn');
             else
@@ -354,7 +354,7 @@ classdef SegmentationApp < matlab.apps.AppBase
             end
         end
 
-        % ------------------------- data helpers -------------------------
+        % ------------------------- helper data -------------------------
         function folder = dataFolder(~, subdir)
             rootFolder = fileparts(fileparts(mfilename('fullpath')));
             folder = fullfile(rootFolder, 'data', subdir);
@@ -392,7 +392,7 @@ classdef SegmentationApp < matlab.apps.AppBase
             end
             [file, folder] = uigetfile({'*.png;*.jpg;*.jpeg;*.bmp;*.tif;*.tiff', 'Image Files'}, ...
                 'Pilih citra', fullfile(startFolder, filesep));
-            figure(app.UIFigure);   % bring app back to front after the dialog
+            figure(app.UIFigure);   % bawa app ke depan lagi setelah dialog
             if isequal(file, 0)
                 return;
             end
@@ -413,7 +413,7 @@ classdef SegmentationApp < matlab.apps.AppBase
     end
 
     % =====================================================================
-    %  Component creation
+    %  Pembuatan komponen
     % =====================================================================
     methods (Access = private)
 
@@ -463,7 +463,7 @@ classdef SegmentationApp < matlab.apps.AppBase
             hg.ColumnSpacing = 12;
             hg.BackgroundColor = app.ColPanel;
 
-            % Accent bar on the left of the title
+            % Bar aksen di kiri judul
             bar = uilabel(hg);
             bar.Text = '';
             bar.BackgroundColor = app.ColAccent;
@@ -494,11 +494,11 @@ classdef SegmentationApp < matlab.apps.AppBase
 
         % ---------------------------- TAB 1 ----------------------------
         function buildEdgeTab(app)
-            rows = {18, 30, 'fit', ...        % 1-3  input
-                    22, 30, 'fit', ...        % 4-6  operator + params
+            rows = {18, 30, 'fit', ...        % 1-3  masukan
+                    22, 30, 'fit', ...        % 4-6  operator + param
                     22, 30, 'fit', ...        % 7-9  threshold
-                    22, 'fit', ...            % 10-11 object mask
-                    '1x', 40, 30};            % 12-14 spacer + actions
+                    22, 'fit', ...            % 10-11 mask objek
+                    '1x', 40, 30};            % 12-14 spacer + aksi
             [sb, main, app.E_StatusLabel] = app.buildTabFrame(app.EdgeTab, rows);
 
             [app.E_DatasetDropDown, app.E_BrowseButton, app.E_ImageInfoLabel] = ...
@@ -506,7 +506,7 @@ classdef SegmentationApp < matlab.apps.AppBase
             app.E_DatasetDropDown.ValueChangedFcn = @(~, ~) app.onEdgeDatasetPicked();
             app.E_BrowseButton.ButtonPushedFcn = @(~, ~) app.onEdgeBrowse();
 
-            % Operator + its parameters
+            % Operator + parameternya
             app.makeSection(sb, 4, 'Operator deteksi tepi');
             app.E_MethodDropDown = app.makeDropDown(sb);
             app.E_MethodDropDown.Layout.Row = 5;
@@ -516,7 +516,7 @@ classdef SegmentationApp < matlab.apps.AppBase
             app.E_ParamGrid.Layout.Row = 6;
             app.E_ParamGrid.Layout.Column = 1;
 
-            % Threshold (first/second-order operators only)
+            % Threshold (hanya operator orde satu/dua)
             app.makeSection(sb, 7, 'Thresholding');
             tg = app.makeGrid(sb, {30}, {'1.4x', '1x'});
             tg.Layout.Row = 8;
@@ -529,8 +529,8 @@ classdef SegmentationApp < matlab.apps.AppBase
             app.E_ThrValueField = app.makeNumberField(tg, 90, [0 100]);
             app.E_ThrHintLabel = app.makeMuted(sb, 9, '');
 
-            % Edge map -> object mask
-            app.makeSection(sb, 10, 'Segmentasi objek');
+            % Peta tepi -> mask objek
+            app.makeSection(sb, 10, 'Pra-proses & segmentasi objek');
             app.E_SegGrid = app.makeGrid(sb, {22}, {'1x'});
             app.E_SegGrid.Layout.Row = 11;
             app.E_SegGrid.Layout.Column = 1;
@@ -540,7 +540,7 @@ classdef SegmentationApp < matlab.apps.AppBase
             app.E_ResetButton.ButtonPushedFcn = @(~, ~) app.onEdgeReset();
             app.E_ExportButton.ButtonPushedFcn = @(~, ~) app.onExportView(app.E_StatusLabel);
 
-            % Image cards 2 x 3
+            % Card citra 2 x 3
             main.RowHeight = {'1x', '1x'};
             main.ColumnWidth = {'1x', '1x', '1x'};
             titles = {'Citra Asli', 'Respons Operator', 'Peta Tepi (biner)', ...
@@ -550,7 +550,7 @@ classdef SegmentationApp < matlab.apps.AppBase
                 app.E_Axes(k) = app.buildImageCard(main, ceil(k / 3), mod(k - 1, 3) + 1, titles{k});
             end
 
-            % Fill dropdown + parameter panels from the registry
+            % Isi dropdown + panel parameter dari registry
             [app.EdgeRegistry, app.EdgeSegSpecs] = edgeRegistry();
             app.E_MethodDropDown.Items = {app.EdgeRegistry.Label};
             app.E_MethodDropDown.ItemsData = {app.EdgeRegistry.Key};
@@ -562,10 +562,10 @@ classdef SegmentationApp < matlab.apps.AppBase
 
         % ---------------------------- TAB 2 ----------------------------
         function buildSplitMergeTab(app)
-            rows = {18, 30, 'fit', ...        % 1-3  input
-                    22, 30, 'fit', ...        % 4-6  predicate + params
-                    22, 'fit', ...            % 7-8  statistics
-                    '1x', 40, 30};            % 9-11 spacer + actions
+            rows = {18, 30, 'fit', ...        % 1-3  masukan
+                    22, 30, 'fit', ...        % 4-6  predikat + param
+                    22, 'fit', ...            % 7-8  statistik
+                    '1x', 40, 30};            % 9-11 spacer + aksi
             [sb, main, app.S_StatusLabel] = app.buildTabFrame(app.SMTab, rows);
 
             [app.S_DatasetDropDown, app.S_BrowseButton, app.S_ImageInfoLabel] = ...
@@ -609,10 +609,10 @@ classdef SegmentationApp < matlab.apps.AppBase
 
         % ---------------------------- TAB 3 ----------------------------
         function buildSemanticTab(app)
-            rows = {18, 30, 'fit', ...        % 1-3  input
-                    22, 'fit', ...            % 4-5  model info
-                    22, 'fit', ...            % 6-7  legend
-                    '1x', 40, 30};            % 8-10 spacer + actions
+            rows = {18, 30, 'fit', ...        % 1-3  masukan
+                    22, 'fit', ...            % 4-5  info model
+                    22, 'fit', ...            % 6-7  legenda
+                    '1x', 40, 30};            % 8-10 spacer + aksi
             [sb, main, app.D_StatusLabel] = app.buildTabFrame(app.SemTab, rows);
 
             [app.D_DatasetDropDown, app.D_BrowseButton, app.D_ImageInfoLabel] = ...
@@ -646,7 +646,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         end
 
         function buildLegend(app, classNames, cmap)
-            % Two-column legend: [color swatch | class name]
+            % Legenda dua kolom: [kotak warna | nama kelas]
             delete(app.D_LegendGrid.Children);
             if isempty(classNames)
                 app.D_LegendGrid.RowHeight = {22};
@@ -677,7 +677,7 @@ classdef SegmentationApp < matlab.apps.AppBase
     end
 
     % =====================================================================
-    %  Tab 1 callbacks (Edge Detection)
+    %  Callback Tab 1 (Edge Detection)
     % =====================================================================
     methods (Access = private)
 
@@ -711,7 +711,7 @@ classdef SegmentationApp < matlab.apps.AppBase
         function onEdgeMethodChanged(app)
             entry = app.currentEdgeEntry();
             app.E_ParamControls = app.buildParamPanel(app.E_ParamGrid, entry.Params);
-            % Canny has its own double threshold -> disable the generic one
+            % Canny punya threshold ganda sendiri -> matikan yang generik
             enable = matlab.lang.OnOffSwitchState(entry.UsesThreshold);
             app.E_ThrModeDropDown.Enable = enable;
             app.E_ThrValueField.Enable = enable;
@@ -785,7 +785,7 @@ classdef SegmentationApp < matlab.apps.AppBase
     end
 
     % =====================================================================
-    %  Tab 2 callbacks (Split & Merge)
+    %  Callback Tab 2 (Split & Merge)
     % =====================================================================
     methods (Access = private)
 
@@ -860,7 +860,7 @@ classdef SegmentationApp < matlab.apps.AppBase
     end
 
     % =====================================================================
-    %  Tab 3 callbacks (Semantic CNN, implemented by Part D)
+    %  Callback Tab 3 (CNN semantik, diisi oleh Bagian D)
     % =====================================================================
     methods (Access = private)
 
@@ -869,7 +869,7 @@ classdef SegmentationApp < matlab.apps.AppBase
                 return;
             end
             if size(img, 3) == 1
-                img = repmat(img, 1, 1, 3);   % CNN expects 3 channels
+                img = repmat(img, 1, 1, 3);   % CNN butuh 3 kanal
             end
             app.D_Image = img;
             app.showOn(app.D_Axes(1), img);
@@ -904,7 +904,7 @@ classdef SegmentationApp < matlab.apps.AppBase
                 return;
             end
 
-            % Accept categorical or numeric labels; undefined/NaN -> 0
+            % Terima label kategorikal atau numerik; undefined/NaN -> 0
             if iscategorical(L)
                 if isempty(classNames)
                     classNames = categories(L)';
@@ -914,7 +914,7 @@ classdef SegmentationApp < matlab.apps.AppBase
             L(isnan(L)) = 0;
             [h, w, ~] = size(app.D_Image);
             if ~isequal(size(L), [h w])
-                L = imresize(L, [h w], 'nearest');   % back to input resolution
+                L = imresize(L, [h w], 'nearest');   % kembalikan ke resolusi masukan
             end
 
             labelRgb = labelToRgb(L, cmap);
@@ -940,7 +940,7 @@ classdef SegmentationApp < matlab.apps.AppBase
     end
 
     % =====================================================================
-    %  Shared: export the whole window as PNG (default folder: results/)
+    %  Shared: ekspor seluruh jendela jadi PNG (folder default: results/)
     % =====================================================================
     methods (Access = private)
 
@@ -964,7 +964,7 @@ classdef SegmentationApp < matlab.apps.AppBase
     end
 
     % =====================================================================
-    %  Constructor / destructor
+    %  Konstruktor / destruktor
     % =====================================================================
     methods (Access = public)
 

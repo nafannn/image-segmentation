@@ -1,7 +1,7 @@
 function showImageOnAxes(ax, img)
-%SHOWIMAGEONAXES Display an image on UIAXES ax. Tries IMSHOW first
-%   (Image Processing Toolbox); falls back to plain IMAGE/IMAGESC so
-%   the app still works without the toolbox.
+%SHOWIMAGEONAXES Tampilkan citra pada UIAXES ax. Coba IMSHOW dulu
+%   (Image Processing Toolbox); kalau tidak tersedia, jatuh ke IMAGE/IMAGESC
+%   biasa supaya app tetap jalan tanpa toolbox.
     cla(ax);
     if isempty(img)
         ax.XTick = [];
