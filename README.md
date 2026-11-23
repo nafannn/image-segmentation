@@ -14,7 +14,7 @@ Anggota kelompok:
 | Nama | NIM |
 |---|---|
 | Nurul Na'im Natifah | 18223106 |
-| Muhammad Izzat Jundy | 13523094 |
+| Muhammad Izzat Jundy | 13523092 |
 
 ![Tampilan tab Edge Detection](docs/gui_preview.jpg)
 
